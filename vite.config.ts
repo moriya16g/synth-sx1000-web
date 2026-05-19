@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/jen-sx1000-pwa/',
+  base: '/synth-sx1000-web/',
   plugins: [
     react(),
     VitePWA({
