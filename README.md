@@ -6,8 +6,7 @@
 > シンプルながら太く暖かいサウンドで知られ、ニューウェーブ〜シンセポップ期に多くのミュージシャンに愛用されました。
 > 本アプリはその回路構成を Web Audio API でエミュレートし、PC・スマートフォンのブラウザ上でリアルタイムに演奏できます。
 
-<!-- デモURLはデプロイ後に更新してください -->
-<!-- 🔗 **Live Demo:** [https://username.github.io/jen-sx1000-pwa/](https://username.github.io/jen-sx1000-pwa/) -->
+🔗 **Live Demo:** [https://moriya16g.github.io/synth-sx1000-web/](https://moriya16g.github.io/synth-sx1000-web/)
 
 ---
 
@@ -88,7 +87,8 @@
 ## 特徴
 
 - ⚡ **ゼロ依存オーディオ** — 外部オーディオライブラリ不使用、ブラウザ標準 Web Audio API のみ
-- 📱 **PWA 対応** — ホーム画面に追加でネイティブアプリ風に使用可能、オフラインでも動作
+- � **アナログモデリング** — ソフトサチュレーション、指数エンベロープ、VCO ピッチドリフトで実機の質感を再現
+- �📱 **PWA 対応** — ホーム画面に追加でネイティブアプリ風に使用可能、オフラインでも動作
 - 🎛️ **リアルなノブ操作** — ドラッグ操作でスムーズに値を変更
 - 🔊 **24dB/oct フィルター** — 実機同様の急峻なフィルターカーブを再現
 - 📐 **レスポンシブ** — デスクトップ / タブレット / スマートフォンに対応
@@ -110,18 +110,31 @@
 本アプリは Jen SX-1000 のアナログ回路構成を Web Audio API のノードグラフで再現しています。
 
 ```
-OscillatorNode (VCO)
+OscillatorNode (VCO) ← Drift LFO (±6 cents, アナログ不安定性)
   → GainNode (Level)
-    → BiquadFilterNode × 2 (VCF: 12dB/oct × 2 = 24dB/oct)
-      → GainNode (VCA / ADSR)
-        → GainNode (Master Volume)
-          → AudioContext.destination
-          
+    → WaveShaperNode (tanh ソフトサチュレーション)
+      → BiquadFilterNode #1 (12dB/oct)
+        → WaveShaperNode (段間サチュレーション)
+          → BiquadFilterNode #2 (12dB/oct)  ← 合計 24dB/oct
+            → GainNode (VCA / 指数 ADSR)
+              → GainNode (Master Volume)
+                → AudioContext.destination
+
 OscillatorNode (LFO) → VCO.detune または VCF.frequency
 ```
 
+### アナログモデリング
+
+| 技術 | 実装 | 効果 |
+|------|------|------|
+| **ソフトサチュレーション** | VCO 出力とフィルター段間に `WaveShaperNode`（`tanh` カーブ、4x オーバーサンプリング） | 波形の角が丸まり、アナログ的な倍音の太さを再現 |
+| **指数エンベロープ** | `setTargetAtTime`（τ = duration/3）による RC 充放電カーブ | アナログ回路のコンデンサ充放電に近い自然な立ち上がり/減衰 |
+| **VCO ピッチドリフト** | 低速 LFO で ±6 セントのランダムデチューン | アナログ VCO の温度ドリフトによる微妙な揺らぎ |
+| **フィルターサチュレーション** | Filter1 → Filter2 間に `WaveShaperNode` | トランジスタラダーフィルターの段間飽和をシミュレート |
+
+### 基本設計
+
 - **24dB/oct フィルター**: 2 段カスケード BiquadFilter (各 12dB/oct) で実現
-- **ADSR エンベロープ**: `linearRampToValueAtTime` によるリアルタイム制御
 - **LFO**: 独立した OscillatorNode から VCO の detune または VCF の frequency パラメータへ接続
 - **iOS Safari 対応**: ユーザージェスチャー時に AudioContext を遅延初期化
 
@@ -137,13 +150,13 @@ OscillatorNode (LFO) → VCO.detune または VCF.frequency
 ### ローカル開発
 
 ```bash
-git clone https://github.com/<username>/jen-sx1000-pwa.git
-cd jen-sx1000-pwa
+git clone https://github.com/moriya16g/synth-sx1000-web.git
+cd synth-sx1000-web
 npm install
 npm run dev
 ```
 
-開発サーバーが起動します → http://localhost:5173/jen-sx1000-pwa/
+開発サーバーが起動します → http://localhost:5173/synth-sx1000-web/
 
 ### ビルド
 
@@ -162,7 +175,7 @@ npm run preview  # ビルド結果をローカルでプレビュー
 2. `main` ブランチにプッシュ
 3. Actions タブでデプロイの進行状況を確認
 
-デプロイ完了後、`https://<username>.github.io/jen-sx1000-pwa/` でアクセスできます。
+デプロイ完了後、`https://moriya16g.github.io/synth-sx1000-web/` でアクセスできます。
 
 ---
 
