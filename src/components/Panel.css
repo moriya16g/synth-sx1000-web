@@ -1,0 +1,28 @@
+.panel-section {
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+.panel-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+}
+.panel-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+}
+.panel-row {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 4px;
+}

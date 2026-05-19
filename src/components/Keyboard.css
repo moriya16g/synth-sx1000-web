@@ -1,0 +1,34 @@
+.kb-container {
+  position: relative;
+  width: 100%;
+  height: 130px;
+  background: #111;
+  touch-action: none;
+  user-select: none;
+}
+.kb-white {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #f5f0e8;
+  border: 0.5px solid #888;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  box-sizing: border-box;
+  z-index: 1;
+  cursor: pointer;
+}
+.kb-white:active { background: #d4cfc0; }
+.kb-black {
+  position: absolute;
+  top: 0;
+  height: 60%;
+  background: #1a1a1a;
+  border: 0.5px solid #000;
+  border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+  box-sizing: border-box;
+  z-index: 2;
+  cursor: pointer;
+}
+.kb-black:active { background: #3a3a3a; }
