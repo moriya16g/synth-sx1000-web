@@ -9,15 +9,26 @@
 }
 .header {
   text-align: center;
-  padding: 8px 0;
+  padding: 6px 0 4px;
   border-bottom: 1px solid #333;
   flex-shrink: 0;
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 12px;
+}
+.header-title {
+  text-align: center;
 }
 .brand {
   font-size: 28px;
   font-weight: 900;
   letter-spacing: 8px;
   color: #d4a843;
+  line-height: 1;
 }
 .model {
   font-size: 16px;

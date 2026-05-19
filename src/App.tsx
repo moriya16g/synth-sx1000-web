@@ -4,6 +4,7 @@ import VCFPanel from './components/VCFPanel';
 import VCAPanel from './components/VCAPanel';
 import LFOPanel from './components/LFOPanel';
 import Keyboard from './components/Keyboard';
+import PresetSelector from './components/PresetSelector';
 import { SynthEngine } from './engine/SynthEngine';
 import {
   DEFAULT_SYNTH_STATE,
@@ -38,6 +39,7 @@ export default function App() {
   const handleVCF = useCallback((vcf: VCFParams) => setSynthState(s => ({ ...s, vcf })), []);
   const handleVCA = useCallback((vca: VCAParams) => setSynthState(s => ({ ...s, vca })), []);
   const handleLFO = useCallback((lfo: LFOParams) => setSynthState(s => ({ ...s, lfo })), []);
+  const handlePreset = useCallback((state: SynthState) => setSynthState(state), []);
 
   const noteOn = useCallback((n: number) => {
     ensureAudio();
@@ -51,8 +53,13 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <div className="brand">JEN</div>
-        <div className="model">SX-1000</div>
+        <div className="header-top">
+          <div className="header-title">
+            <div className="brand">JEN</div>
+            <div className="model">SX-1000</div>
+          </div>
+          <PresetSelector onSelect={handlePreset} />
+        </div>
         <div className="subtitle">ANALOG SYNTHESIZER</div>
       </header>
 

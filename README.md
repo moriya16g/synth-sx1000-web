@@ -72,23 +72,29 @@
 | **Speed** | 変調の速さ |
 | **Amount** | 変調の深さ |
 
-### おすすめの音作り
+### プリセット
 
-| サウンド | 設定のヒント |
-|---------|-------------|
-| **太いベース** | SAW波、Octave 16'、Cutoff 低め、Reso やや上げ、VCA の A=0 D=短 S=0.7 R=短 |
-| **ブラス風リード** | SAW波、Octave 8'、VCF Env 高め、Filter A=短 D=中 S=0.3、VCA A=短 |
-| **シンセパッド** | SQR波、P.W. 中央付近、VCA A=長 D=長 S=0.8 R=長、LFO→VCO で軽いビブラート |
-| **レーザー効果音** | Reso 最大 (自己発振)、Cutoff を手動で素早く動かす |
-| **ワウ効果** | LFO→VCF、Speed 中程度、Amount 大きめ |
+ヘッダーの **PRESETS ▾** ボタンから 36 種類のプリセットを選択できます。
+カテゴリでフィルタリングして素早くアクセスでき、選択するとすべてのノブが即座に更新されます。
+
+| カテゴリ | プリセット |
+|---------|----------|
+| **BASS** (6) | Fat Bass, Sub Bass, Acid Bass, Pluck Bass, Funky Bass, Round Bass |
+| **LEAD** (5) | Classic Lead, Screaming Lead, Square Lead, Portamento Lead, Nasal Lead |
+| **PAD** (5) | Warm Pad, Square Pad, Dark Pad, Shimmer Pad, PWM Pad |
+| **KEY** (4) | Electric Piano, Clav, Harpsichord, Organ |
+| **BRASS** (4) | Synth Brass, Trumpet, Muted Brass, French Horn |
+| **STRING** (4) | Synth Strings, Cello, Violin, Pizzicato |
+| **SFX** (7) | Laser, Siren, Wah, Alien, Wind, Zap, Resonance Sweep, Bubbles |
+
+プリセットを選択した後、各ノブを調整して音色をカスタマイズすることもできます。
 
 ---
 
 ## 特徴
 
 - ⚡ **ゼロ依存オーディオ** — 外部オーディオライブラリ不使用、ブラウザ標準 Web Audio API のみ
-- � **アナログモデリング** — ソフトサチュレーション、指数エンベロープ、VCO ピッチドリフトで実機の質感を再現
-- �📱 **PWA 対応** — ホーム画面に追加でネイティブアプリ風に使用可能、オフラインでも動作
+- � **アナログモデリング** — ソフトサチュレーション、指数エンベロープ、VCO ピッチドリフトで実機の質感を再現- 🎨 **36種類のプリセット** — Bass / Lead / Pad / Key / Brass / String / SFX の8カテゴリから即座に音色を呼び出し- �📱 **PWA 対応** — ホーム画面に追加でネイティブアプリ風に使用可能、オフラインでも動作
 - 🎛️ **リアルなノブ操作** — ドラッグ操作でスムーズに値を変更
 - 🔊 **24dB/oct フィルター** — 実機同様の急峻なフィルターカーブを再現
 - 📐 **レスポンシブ** — デスクトップ / タブレット / スマートフォンに対応
