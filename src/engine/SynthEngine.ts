@@ -77,6 +77,9 @@ export class SynthEngine {
     this.updateLive();
   }
 
+  /** Expose AudioContext for sequencer timing */
+  get audioContext(): AudioContext | null { return this.ctx; }
+
   init() {
     if (this.ctx) return;
     this.ctx = new AudioContext();
