@@ -118,7 +118,8 @@
 ## 特徴
 
 - ⚡ **ゼロ依存オーディオ** — 外部オーディオライブラリ不使用、ブラウザ標準 Web Audio API のみ
-- 🔥 **アナログモデリング** — ソフトサチュレーション、指数エンベロープ、VCO ピッチドリフトで実機の質感を再現
+- 🔥 **アナログモデリング** — PeriodicWave カスタム波形、サブオシレーター、非対称サチュレーション、VCO ドリフトで実機の太く暖かい音を再現
+- 🎹 **可変パルス幅 (PWM)** — フーリエ級数ベースのパルス波生成でデューティ比 5％〜95％ の音色変化を実現
 - 🎨 **36種類のプリセット** — Bass / Lead / Pad / Key / Brass / String / SFX の8カテゴリから即座に音色を呼び出し
 - 🎼 **シーケンサー** — ピアノロールでノート入力、BPM 調整、11 曲のデモソング付き
 - 📱 **PWA 対応** — ホーム画面に追加でネイティブアプリ風に使用可能、オフラインでも動作
@@ -143,15 +144,25 @@
 本アプリは Jen SX-1000 のアナログ回路構成を Web Audio API のノードグラフで再現しています。
 
 ```
-OscillatorNode (VCO) ← Drift LFO (±6 cents, アナログ不安定性)
-  → GainNode (Level)
-    → WaveShaperNode (tanh ソフトサチュレーション)
-      → BiquadFilterNode #1 (12dB/oct)
-        → WaveShaperNode (段間サチュレーション)
-          → BiquadFilterNode #2 (12dB/oct)  ← 合計 24dB/oct
-            → GainNode (VCA / 指数 ADSR)
-              → GainNode (Master Volume)
-                → AudioContext.destination
+OscillatorNode (VCO / PeriodicWave) ← Drift LFO (±6 cents)
+  → GainNode (Level) ──────────────┐
+                                        ├─→ GainNode (Merge)
+OscillatorNode (Sub VCO / -1oct sine)   │     │
+  → GainNode (Sub Level) ─────────┘     │
+                                              ↓
+                              WaveShaperNode (tanh 非対称サチュレーション, drive=3.5)
+                                              ↓
+                              BiquadFilterNode #1 (12dB/oct)
+                                              ↓
+                              WaveShaperNode (段間サチュレーション)
+                                              ↓
+                              BiquadFilterNode #2 (12dB/oct)  ← 合計 24dB/oct
+                                              ↓
+                              GainNode (VCA / 指数 ADSR)
+                                              ↓
+                              GainNode (Master Volume)
+                                              ↓
+                              AudioContext.destination
 
 OscillatorNode (LFO) → VCO.detune または VCF.frequency
 ```
@@ -160,7 +171,10 @@ OscillatorNode (LFO) → VCO.detune または VCF.frequency
 
 | 技術 | 実装 | 効果 |
 |------|------|------|
-| **ソフトサチュレーション** | VCO 出力とフィルター段間に `WaveShaperNode`（`tanh` カーブ、4x オーバーサンプリング） | 波形の角が丸まり、アナログ的な倍音の太さを再現 |
+| **PeriodicWave カスタム波形** | 128倍音のフーリエ級数でアナログ風波形を生成。倍音ごとに±5% の振幅ばらつき + 高域ロールオフ + 微小な位相非対称 | デジタルの完璧な波形ではなく、アナログ回路の倍音特性を再現 |
+| **可変パルス幅 (PWM)** | パルス波のフーリエ係数をデューティ比から直接計算し `PeriodicWave` で再現 | P.W. ノブで 5%〜95% のパルス幅をリアルタイムに変更可能 |
+| **サブオシレーター** | メイン VCO の1オクターブ下にサイン波を 18% レベルでミックス | 基音の重みとアナログ的な音の厚みを追加 |
+| **非対称サチュレーション** | `tanh` カーブ (drive=3.5) で正側がより強くクリップ、4x オーバーサンプリング | 偶数次倍音を生成し、アナログ的な暖かみを付与 |
 | **指数エンベロープ** | `setTargetAtTime`（τ = duration/3）による RC 充放電カーブ | アナログ回路のコンデンサ充放電に近い自然な立ち上がり/減衰 |
 | **VCO ピッチドリフト** | 低速 LFO で ±6 セントのランダムデチューン | アナログ VCO の温度ドリフトによる微妙な揺らぎ |
 | **フィルターサチュレーション** | Filter1 → Filter2 間に `WaveShaperNode` | トランジスタラダーフィルターの段間飽和をシミュレート |

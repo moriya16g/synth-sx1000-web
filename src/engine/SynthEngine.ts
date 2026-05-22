@@ -32,11 +32,13 @@ function timeConstant(duration: number): number {
 
 /** Build a soft-saturation curve for WaveShaperNode.
  *  Attempt to mimic analog transistor stage: tanh-style. */
-function makeSaturationCurve(samples = 8192, drive = 1.5): Float32Array {
+function makeSaturationCurve(samples = 8192, drive = 3.5): Float32Array {
   const curve = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
     const x = (i * 2) / samples - 1;          // -1 … +1
-    curve[i] = Math.tanh(x * drive);           // tanh soft-clip
+    // Asymmetric: positive clips harder → even harmonics (analog warmth)
+    const d = x >= 0 ? drive : drive * 0.85;
+    curve[i] = Math.tanh(x * d);
   }
   return curve;
 }
@@ -45,8 +47,20 @@ function makeSaturationCurve(samples = 8192, drive = 1.5): Float32Array {
 const DRIFT_MAX_CENTS = 6;     // ±6 cents max
 const DRIFT_INTERVAL = 0.15;   // update every 150ms
 
+/** Number of harmonics for PeriodicWave (browser auto-bandlimits at Nyquist) */
+const NUM_HARMONICS = 128;
+/** Sub-oscillator level relative to main VCO */
+const SUB_OSC_LEVEL = 0.18;
+
+/** Deterministic per-harmonic amplitude variation.
+ *  Simulates analog component tolerance (±5%). */
+function analogVar(n: number): number {
+  return 1.0 + 0.05 * Math.sin(n * 7.13 + n * n * 0.31);
+}
+
 interface Voice {
   osc: OscillatorNode;
+  subOsc: OscillatorNode;
   f1: BiquadFilterNode;
   f2: BiquadFilterNode;
   vca: GainNode;
@@ -66,6 +80,10 @@ export class SynthEngine {
 
   // Shared WaveShaper curves (created once per AudioContext)
   private satCurve: Float32Array | null = null;
+
+  // Cached PeriodicWave objects for analog-modeled waveforms
+  private analogSawWave: PeriodicWave | null = null;
+  private pulseWaveCache: { pw: number; wave: PeriodicWave } | null = null;
 
   constructor(state: SynthState) {
     this._state = { ...state };
@@ -87,11 +105,64 @@ export class SynthEngine {
     this.master.gain.value = 0.8;
     this.master.connect(this.ctx.destination);
     this.satCurve = makeSaturationCurve();
+    this.analogSawWave = this.buildAnalogSawtooth();
   }
 
   /** iOS Safari requires resuming AudioContext on user gesture */
   resume() {
     if (this.ctx?.state === 'suspended') this.ctx.resume();
+  }
+
+  // ── Analog PeriodicWave generators ──
+
+  /** Analog-style sawtooth: standard 1/n harmonics with component-tolerance
+   *  variation and subtle phase asymmetry. */
+  private buildAnalogSawtooth(): PeriodicWave {
+    const N = NUM_HARMONICS;
+    const real = new Float32Array(N + 1);
+    const imag = new Float32Array(N + 1);
+    for (let n = 1; n <= N; n++) {
+      const rolloff = 1.0 / (1.0 + n * n * 0.0001);
+      imag[n] = (Math.pow(-1, n + 1) / n) * analogVar(n) * rolloff;
+      real[n] = 0.004 * Math.cos(n * 2.71) / n; // tiny cosine leakage
+    }
+    return this.ctx!.createPeriodicWave(real, imag, { disableNormalization: false });
+  }
+
+  /** Pulse wave with variable duty cycle and analog flavor. */
+  private buildPulseWave(dutyCycle: number): PeriodicWave {
+    const pw = Math.max(0.05, Math.min(0.95, dutyCycle));
+    const N = NUM_HARMONICS;
+    const real = new Float32Array(N + 1);
+    const imag = new Float32Array(N + 1);
+    for (let n = 1; n <= N; n++) {
+      const rolloff = 1.0 / (1.0 + n * n * 0.0001);
+      const v = analogVar(n) * rolloff;
+      real[n] = ((2 / (n * Math.PI)) * Math.sin(2 * Math.PI * n * pw)) * v;
+      imag[n] = ((2 / (n * Math.PI)) * (1 - Math.cos(2 * Math.PI * n * pw))) * v;
+    }
+    return this.ctx!.createPeriodicWave(real, imag, { disableNormalization: false });
+  }
+
+  /** Get or build cached pulse wave for current duty cycle */
+  private getPulseWave(dutyCycle: number): PeriodicWave {
+    const pw = Math.max(0.05, Math.min(0.95, dutyCycle));
+    if (this.pulseWaveCache && Math.abs(this.pulseWaveCache.pw - pw) < 0.005) {
+      return this.pulseWaveCache.wave;
+    }
+    const wave = this.buildPulseWave(pw);
+    this.pulseWaveCache = { pw, wave };
+    return wave;
+  }
+
+  /** Apply the appropriate analog waveform to an oscillator */
+  private applyWaveform(osc: OscillatorNode) {
+    const { waveform, pulseWidth } = this._state.vco;
+    if (waveform === 'sawtooth') {
+      osc.setPeriodicWave(this.analogSawWave!);
+    } else {
+      osc.setPeriodicWave(this.getPulseWave(pulseWidth));
+    }
   }
 
   /** Create a WaveShaperNode with our soft-saturation curve */
@@ -107,9 +178,10 @@ export class SynthEngine {
     const v = this.voice;
     const { vco, vcf, lfo } = this._state;
     const now = this.ctx.currentTime;
-    try { v.osc.type = vco.waveform; } catch {}
+    this.applyWaveform(v.osc);
     const freq = mtof(v.note + octOff(vco.octave) + vco.tune * 2);
     v.osc.frequency.setValueAtTime(freq, now);
+    v.subOsc.frequency.setValueAtTime(freq / 2, now);
     const cf = mapCutoff(vcf.cutoff);
     v.f1.frequency.setValueAtTime(cf, now);
     v.f1.Q.setValueAtTime(mapQ(vcf.resonance), now);
@@ -132,10 +204,11 @@ export class SynthEngine {
     const now = c.currentTime;
     const { vco, vcf, vca, lfo } = this._state;
 
-    // ── VCO ──
+    // ── VCO (Analog PeriodicWave) ──
     const osc = c.createOscillator();
-    osc.type = vco.waveform;
-    osc.frequency.setValueAtTime(mtof(midi + octOff(vco.octave) + vco.tune * 2), now);
+    const freq = mtof(midi + octOff(vco.octave) + vco.tune * 2);
+    osc.frequency.setValueAtTime(freq, now);
+    this.applyWaveform(osc);
 
     // [ANALOG] Pitch drift — slow random detune to mimic VCO instability
     const driftLfo = c.createOscillator();
@@ -148,6 +221,13 @@ export class SynthEngine {
 
     const oscGain = c.createGain();
     oscGain.gain.setValueAtTime(vco.level, now);
+
+    // ── Sub-oscillator (1 octave below, sine wave for analog weight) ──
+    const subOsc = c.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(freq / 2, now);
+    const subGain = c.createGain();
+    subGain.gain.setValueAtTime(vco.level * SUB_OSC_LEVEL, now);
 
     // [ANALOG] Soft saturation on oscillator output
     const oscSat = this.createSaturator();
@@ -203,13 +283,18 @@ export class SynthEngine {
     }
 
     // ── Signal chain ──
-    // VCO → Level → Saturation → Filter1 → Saturation → Filter2 → VCA → Master
-    osc.connect(oscGain).connect(oscSat).connect(f1);
+    // (Main VCO + Sub VCO) → Merge → Saturation → Filter1 → Saturation → Filter2 → VCA → Master
+    const oscMerge = c.createGain();
+    oscMerge.gain.setValueAtTime(1, now);
+    osc.connect(oscGain).connect(oscMerge);
+    subOsc.connect(subGain).connect(oscMerge);
+    oscMerge.connect(oscSat).connect(f1);
     f1.connect(filterSat).connect(f2);
     f2.connect(vcaN).connect(this.master);
     osc.start(now);
+    subOsc.start(now);
 
-    this.voice = { osc, f1, f2, vca: vcaN, lfoOsc, lfoGain, driftLfo, driftGain, note: midi, timer: null };
+    this.voice = { osc, subOsc, f1, f2, vca: vcaN, lfoOsc, lfoGain, driftLfo, driftGain, note: midi, timer: null };
   }
 
   noteOff(midi: number) {
@@ -244,6 +329,7 @@ export class SynthEngine {
   private kill(v: Voice) {
     if (v.timer) clearTimeout(v.timer);
     try { v.osc.stop(); } catch {}
+    try { v.subOsc.stop(); } catch {}
     try { v.lfoOsc?.stop(); } catch {}
     try { v.driftLfo?.stop(); } catch {}
   }
@@ -254,5 +340,7 @@ export class SynthEngine {
     this.ctx = null;
     this.master = null;
     this.satCurve = null;
+    this.analogSawWave = null;
+    this.pulseWaveCache = null;
   }
 }
