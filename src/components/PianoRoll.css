@@ -37,13 +37,15 @@
   min-height: 0;
 }
 
-/* Piano keys column */
+/* Piano keys column — scroll synced from grid via JS */
 .pr-keys {
   flex-shrink: 0;
   width: 36px;
   overflow-y: hidden;
   border-right: 1px solid #444;
+  scrollbar-width: none;
 }
+.pr-keys::-webkit-scrollbar { display: none; }
 .pr-key {
   height: 14px;
   display: flex;
@@ -65,15 +67,15 @@
   color: #666;
 }
 
-/* Grid wrapper — scrolls horizontally */
+/* Grid wrapper — scrolls both directions */
 .pr-grid-wrapper {
   flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
-.pr-grid-wrapper::-webkit-scrollbar { height: 6px; }
+.pr-grid-wrapper::-webkit-scrollbar { width: 6px; height: 6px; }
 .pr-grid-wrapper::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.pr-grid-wrapper::-webkit-scrollbar-corner { background: #111; }
 
 /* Grid */
 .pr-grid {

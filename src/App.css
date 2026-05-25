@@ -58,19 +58,32 @@
   border-top: 2px solid #333;
 }
 .seq-toggle {
-  background: #2a2a2a;
+  background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
   color: #d4a843;
-  border: 1px solid #444;
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
+  border: 2px solid #d4a843;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
   cursor: pointer;
   white-space: nowrap;
+  text-shadow: 0 0 8px rgba(212, 168, 67, 0.3);
+  box-shadow: 0 0 8px rgba(212, 168, 67, 0.2), inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: all 0.15s ease;
+  animation: seq-pulse 2s ease-in-out infinite;
+}
+.seq-toggle:hover {
+  background: linear-gradient(180deg, #444, #333);
+  box-shadow: 0 0 14px rgba(212, 168, 67, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
 }
 .seq-toggle:active {
   background: #333;
+  transform: scale(0.96);
+}
+@keyframes seq-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(212, 168, 67, 0.2), inset 0 1px 0 rgba(255,255,255,0.05); }
+  50% { box-shadow: 0 0 14px rgba(212, 168, 67, 0.45), inset 0 1px 0 rgba(255,255,255,0.05); }
 }
 .sequencer-area {
   display: flex;

@@ -21,8 +21,16 @@ const DEFAULT_DURATION = 2; // 2 steps = 8th note
 
 export default function PianoRoll({ pattern, currentStep, playing, onChange }: Props) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const keysRef = useRef<HTMLDivElement>(null);
   const [tool, setTool] = useState<'draw' | 'erase'>('draw');
   const drawingRef = useRef(false);
+
+  // Sync vertical scroll between keys column and grid
+  const handleGridScroll = useCallback(() => {
+    if (gridRef.current && keysRef.current) {
+      keysRef.current.scrollTop = gridRef.current.scrollTop;
+    }
+  }, []);
 
   // Auto-scroll to follow playhead
   useEffect(() => {
@@ -92,7 +100,7 @@ export default function PianoRoll({ pattern, currentStep, playing, onChange }: P
         >Clear</button>
       </div>
       <div className="pr-body">
-        <div className="pr-keys">
+        <div className="pr-keys" ref={keysRef}>
           {rows.map(midi => {
             const name = NOTE_NAMES[midi % 12];
             const oct = Math.floor(midi / 12) - 1;
@@ -106,7 +114,7 @@ export default function PianoRoll({ pattern, currentStep, playing, onChange }: P
             );
           })}
         </div>
-        <div className="pr-grid-wrapper" ref={gridRef}>
+        <div className="pr-grid-wrapper" ref={gridRef} onScroll={handleGridScroll}>
           <div
             className="pr-grid"
             style={{ width: pattern.length * 20 }}
