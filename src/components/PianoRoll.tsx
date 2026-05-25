@@ -18,12 +18,23 @@ const MIN_NOTE = 48;
 const MAX_NOTE = 83;
 
 const DEFAULT_DURATION = 2; // 2 steps = 8th note
+const STEP_PX = 20;
+const BAR_STEPS = 16;
+const SCROLL_AMOUNT = BAR_STEPS * STEP_PX; // 1 bar = 320px
 
 export default function PianoRoll({ pattern, currentStep, playing, onChange }: Props) {
   const gridRef = useRef<HTMLDivElement>(null);
   const keysRef = useRef<HTMLDivElement>(null);
   const [tool, setTool] = useState<'draw' | 'erase'>('draw');
   const drawingRef = useRef(false);
+
+  // Horizontal scroll controls
+  const scrollGridLeft = useCallback(() => {
+    gridRef.current?.scrollBy({ left: -SCROLL_AMOUNT, behavior: 'smooth' });
+  }, []);
+  const scrollGridRight = useCallback(() => {
+    gridRef.current?.scrollBy({ left: SCROLL_AMOUNT, behavior: 'smooth' });
+  }, []);
 
   // Sync vertical scroll between keys column and grid
   const handleGridScroll = useCallback(() => {
@@ -98,6 +109,10 @@ export default function PianoRoll({ pattern, currentStep, playing, onChange }: P
           className="pr-tool"
           onClick={() => onChange({ ...pattern, notes: [] })}
         >Clear</button>
+        <div className="pr-scroll-nav">
+          <button className="pr-scroll-btn" onClick={scrollGridLeft} aria-label="Scroll left">◀</button>
+          <button className="pr-scroll-btn" onClick={scrollGridRight} aria-label="Scroll right">▶</button>
+        </div>
       </div>
       <div className="pr-body">
         <div className="pr-keys" ref={keysRef}>
@@ -151,10 +166,26 @@ export default function PianoRoll({ pattern, currentStep, playing, onChange }: P
                       key={step}
                       className={`pr-cell${note ? ' filled' : ''}${isStart ? ' start' : ''}${step % 4 === 0 ? ' beat-edge' : ''}`}
                       onPointerDown={(e) => {
+                        if (e.pointerType === 'touch') return; // let touch scroll natively
                         e.preventDefault();
                         handlePointerDown(midi, step);
                       }}
                       onPointerEnter={() => handlePointerEnter(midi, step)}
+                      onClick={(e) => {
+                        // Handle touch taps via click (fires after touchend)
+                        if ((e as unknown as PointerEvent).pointerType !== undefined) return;
+                        handlePointerDown(midi, step);
+                      }}
+                      onTouchEnd={(e) => {
+                        // Detect tap (no scroll) on touch devices
+                        if (!drawingRef.current) {
+                          const touch = e.changedTouches[0];
+                          const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                          if (el === e.currentTarget) {
+                            toggleNote(midi, step);
+                          }
+                        }
+                      }}
                     />
                   );
                 })}
